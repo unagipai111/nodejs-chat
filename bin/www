@@ -1,0 +1,133 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('expressapp:server');
+var http = require('http');
+var socketio = require('socket.io');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '8081');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+var room = [];
+var points = {};
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+var io = socketio.listen(server);
+
+io.sockets.on('connection', function (socket) {
+  socket.on('into', function(data) {
+    socket.client_name = data.name;
+    socket.room = data.room;
+    socket.num_of_chat = 0;
+    socket.join(data.room);
+
+    points[socket.client_name] = socket.num_of_chat;
+    
+    if (room[data.room] == undefined) {
+      room[data.room] = [];
+    }
+    room[data.room].push(socket.client_name);
+    
+    socket.emit('into_room', {
+      msg: '[' + data.room + ']へ入室しました。',
+      room_member: room[data.room],
+      room_members_point: points
+    });
+    socket.broadcast.to(data.room).emit('add_member', {
+      msg: '['+ data.name + ']さんが入室しました。',
+      member: data.name
+    });
+  });
+  
+  socket.on('from_client_chat', function(data) {
+    io.sockets.to(socket.room).emit('from_server_chat', '[' + socket.client_name + ']: ' + data.msg);
+    
+    socket.num_of_chat++;
+    points[socket.client_name] = socket.num_of_chat;
+    io.sockets.in(socket.room).emit('add_point', {
+      name: socket.client_name,
+      point: socket.num_of_chat
+    });
+  });
+});
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}

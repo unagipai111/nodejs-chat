@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <title><%= title %></title>
+      <link rel='stylesheet' href='/stylesheets/style.css' />
+  </head>
+  <body>
+    <h1><%= title %></h1>
+    <table>
+      <tr>
+        <td>
+          <%= input1 %>
+        </td>
+        <td>
+          <%= input2 %>
+        </td>
+        <td>
+          <%= input3 %>
+        </td>
+      </tr>
+    </table>
+    <form method="post" action="/helo">
+      <p><input type="text" name="input1"></p>
+      <p><input type="text" name="input2"></p>
+      <p><input type="text" name="input3"></p>
+      <input type="submit">
+    </form>
+  </body>
+</html>

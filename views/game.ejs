@@ -1,0 +1,96 @@
+<script src="/socket.io/socket.io.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
+<!DOCTYPE html>
+<html>
+  <head>
+      <title>発言数がわかるちゃっと</title>
+      <STYLE type="text/css">
+      .game_view {
+          height: 70%;
+          width: 100%;
+      }
+      .chat {
+          height: 30%;
+      }
+      .scr {
+          overflow: scroll;   /* スクロール表示 */ 
+          height: 80%;
+          background-color: lightgray;
+      }
+      </STYLE>
+  </head>
+  <body>
+    <div id="game_view" class="game_view">
+
+      <p>参加者：</p>
+      <table id="member">
+      </table>
+    </div>
+    <div id="chat" class="chat">
+      <div id="log_window" class="scr">
+        <ul id=logs></ul>
+      </div>
+
+      <form id="chat_form">
+        <input type="text" id="msg" style="width:80%">
+        <input type="submit" style="width:15%">
+      </form>
+    </div>
+    <script type="text/javascript">
+      $(function() {
+        var socket = io.connect();
+        socket.json.emit('into', {
+          room: '<%= room %>',
+          name: '<%= name %>'
+        });
+
+        socket.on('from_server_chat', function(data) {
+          $('#logs').append($('<li>').text(data));
+        });
+
+        socket.on('add_point', function(data) {
+          var td = $('#member td#' + data.name + '-point');
+          td.each(function() {
+            console.log('td: ' + $(this));
+            $(this).text(data.point);
+          });
+        });
+
+        $('#chat_form').submit(function(e) {
+          e.preventDefault();
+          socket.json.emit('from_client_chat', {
+            msg: $('#msg').val()
+          });
+          $('#msg').val('').focus();
+
+        });
+        
+        socket.on('into_room', function(data) {
+          $('#logs').append($('<li>').text(data.msg));  
+
+          $.each(data.room_member, function() {
+            var td1 = $('<td>').text(String(this));
+          
+            var name = String(this);
+            console.log(name);
+            var current_point = data.room_members_point[String(this)];
+            var td2 = $('<td>').attr('id', name + "-point").text(current_point);
+            
+            var tr = $('<tr>').append(td1).append(td2);
+            $('#member').append(tr);
+          });
+        });
+
+        socket.on('add_member', function(data) {
+          $('#logs').append($('<li>').text(data.msg));  
+
+          var td1 = $('<td>').text(String(data.member));
+          var td2 = $('<td>').attr('id', String(data.member) + "-point").text(0);
+          var tr = $('<tr>').append(td1).append(td2);
+          $('#member').append(tr);
+        
+        });
+      });
+    </script>
+  </body>
+</html>
